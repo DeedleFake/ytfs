@@ -28,9 +28,11 @@ fsinit(Srv *s) {
 
 void
 fsread(Req *r) {
-	char buf[128];
-	sprint(buf, "%s", r->fid->file == ctl ? "true" : "false");
-	readstr(r, buf);
+	Fid *fid = r->fid;
+	if (fid->file == ctl) {
+		readstr(r, "Not implemented.");
+	}
+
 	respond(r, nil);
 }
 
