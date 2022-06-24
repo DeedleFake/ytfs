@@ -8,7 +8,32 @@ typedef struct YTFile {
 	File *file;
 	void (*read)(Req *);
 	void *aux;
+	char manual;
 } YTFile;
+
+YTFile *
+createytfile(File *parent, char *name, char *user, ulong mode, void (*read)(Req *), void *aux) {
+	YTFile *ytfile = malloc(sizeof(YTFile));
+	File *file = createfile(parent, name, user, mode, ytfile);
+	if (file == nil) {
+		free(ytfile);
+		return nil;
+	}
+
+	ytfile->file = file;
+	ytfile->read = read;
+	ytfile->aux = aux;
+
+	return ytfile;
+}
+
+void
+freeytfile(File *file) {
+	YTFile *ytfile = (YTFile *)file->aux;
+	if ((ytfile != nil) && !ytfile->manual) {
+		free(file->aux);
+	}
+}
 
 void
 ctlread(Req *r) {
@@ -18,13 +43,14 @@ ctlread(Req *r) {
 
 YTFile ctl = {
 	.read = ctlread,
+	.manual = 1,
 };
 
 void
 fsinit(Srv *s) {
 	char *user = getuser();
 
-	s->tree = alloctree(user, user, 0555, nil);
+	s->tree = alloctree(user, user, 0555, freeytfile);
 	if (s->tree == nil) {
 		sysfatal("fsinit: alloctree: %r");
 	}
