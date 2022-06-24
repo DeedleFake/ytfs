@@ -4,7 +4,21 @@
 #include <thread.h>
 #include <9p.h>
 
-File *ctl;
+typedef struct YTFile {
+	File *file;
+	void (*read)(Req *);
+	void *aux;
+} YTFile;
+
+void
+ctlread(Req *r) {
+	readstr(r, "Not implemented.");
+	respond(r, nil);
+}
+
+YTFile ctl = {
+	.read = ctlread,
+};
 
 void
 fsinit(Srv *s) {
@@ -19,21 +33,17 @@ fsinit(Srv *s) {
 	if (root == nil) {
 		sysfatal("fsinit: createfile: %r");
 	}
-
-	ctl = createfile(root, "ctl", user, 0444, nil);
-	if (ctl == nil) {
+	
+	ctl.file = createfile(root, "ctl", user, 0444, &ctl);
+	if (ctl.file == nil) {
 		sysfatal("fsinit: createfile: %r");
 	}
 }
 
 void
 fsread(Req *r) {
-	Fid *fid = r->fid;
-	if (fid->file == ctl) {
-		readstr(r, "Not implemented.");
-	}
-
-	respond(r, nil);
+	YTFile *ytfile = (YTFile *)r->fid->file->aux;
+	ytfile->read(r);
 }
 
 void
